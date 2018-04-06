@@ -38,10 +38,10 @@ b,d,0.4
 r,a,0.1
 r,b,0.2
 EOF
-1.1
+0.4
 ```
 
-## Computing the fair proportion of a node in a phylogenetic network
+## Computing the fair proportion of a node
 
 Given the network `((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r`, the FP of the nodes 1,
 2, 3, 4 and 5 can be computed as follows:
