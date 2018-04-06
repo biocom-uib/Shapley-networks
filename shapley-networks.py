@@ -219,7 +219,7 @@ def main():
     upsd_parser = subparsers.add_parser('upsd',
         help='Compute the (rooted) phylogenetic subnet diversity',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=rPSD_USAGE_EXAMPLE)
+        epilog=uPSD_USAGE_EXAMPLE)
 
     add_network_arg(upsd_parser)
     add_weights_file_arg(upsd_parser)
