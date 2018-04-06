@@ -2,7 +2,10 @@
 
 ## Dependencies
 
-`phylonetwork`
+Before using this script, you need to install [PhyloNetwork](https://github.com/bielcardona/PhyloNetworks):
+```
+pip2 install --user phylonetwork
+```
 
 ## Computing the phylogenetic subnet diversity
 
