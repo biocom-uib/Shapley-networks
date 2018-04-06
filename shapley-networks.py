@@ -44,13 +44,13 @@ def cophenetic_value(net, us, weight_fn=default_weight_fn):
 
     rev_net = nx.reverse(net)
     nodes_above_all_us = frozenset.intersection(*[frozenset(nodes_below(rev_net, u)) for u in us])
-    edges_above_all_us = [(w, v) for v in nodes_above_all_us for w in rev_net[v]]
+    edges_above_all_us = ((w, v) for v in nodes_above_all_us for w in rev_net[v])
     return sum(weight_fn(net, w, v) for w, v in edges_above_all_us)
 
 def rooted_phylogenetic_diversity(net, us, weight_fn=default_weight_fn):
     rev_net = nx.reverse(net)
     nodes_above_us = frozenset().union(*[frozenset(nodes_below(rev_net, u)) for u in us])
-    edges_above_us = [(w, v) for v in nodes_above_us for w in rev_net[v]]
+    edges_above_us = ((w, v) for v in nodes_above_us for w in rev_net[v])
     return sum(weight_fn(net, w, v) for w, v in edges_above_us)
 
 def unrooted_phylogenetic_diversity(net, us, weight_fn=default_weight_fn):
@@ -65,7 +65,29 @@ def fair_proportion(net, u, weight_fn=default_weight_fn, kappa_fn=None):
     edges_above_u = ((w, v) for v in nodes_above_u for w in rev_net[v])
     return sum(weight_fn(net, w, v) / kappa_fn(v) for w, v in edges_above_u)
 
+def cophenetic_shapley_value(net, u, weight_fn=default_weight_fn, kappa_fn=None):
+    if kappa_fn is None:
+        kappa_fn = cache_kappa(net)
 
+    leaves = net.leaves()
+    n = len(leaves)
+    rev_net = nx.reverse(net)
+    nodes_above_u = nodes_below(rev_net, u)
+    edges_above_u = frozenset((w, v) for v in nodes_above_u for w in rev_net[v])
+    edges_not_above_u = (e for e in net.edges() if e not in edges_above_u)
+
+    total_weight = sum(weight_fn(net, *e) for e in net.edges())
+
+    return total_weight/n - sum(weight_fn(net, w, v) / (n - kappa_fn(v))
+                                  for w, v in edges_not_above_u)
+
+def unrooted_shapley_value(net, u, weight_fn=default_weight_fn, kappa_fn=None):
+    if kappa_fn is None:
+        kappa_fn = cache_kappa(net)
+
+    sv = fair_proportion(net, u, weight_fn=weight_fn, kappa_fn=kappa_fn)
+    coph_sv = cophenetic_shapley_value(net, u, weight_fn=weight_fn, kappa_fn=kappa_fn)
+    return sv - coph_sv
 
 def read_weights_file(f):
     return {(u, v): float(w) for u,v,w in csv_reader(f, skipinitialspace=True)}
@@ -135,6 +157,44 @@ Usage example:
 \u00a0
 """
 
+COPH_SV_USAGE_EXAMPLE = u"""
+Usage example:
+
+  # Computing the cophenetic shapley value of all the leaves
+  $ %(prog)s cophenetic-shapley-value '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 1 2 3 4 5 <<EOF
+      H,4,0.5
+      a,c,0.3
+      b,d,0.4
+      r,a,0.1
+      r,b,0.2
+  EOF
+  1\t-0.158333333333
+  2\t-0.108333333333
+  3\t-0.0583333333333
+  4\t0.3
+  5\t0.025
+\u00a0
+"""
+
+U_SV_USAGE_EXAMPLE = u"""
+Usage example:
+
+  # Computing the unrooted shapley value of all the leaves
+  $ %(prog)s unrooted-shapley-value '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 1 2 3 4 5 <<EOF
+      H,4,0.5
+      a,c,0.3
+      b,d,0.4
+      r,a,0.1
+      r,b,0.2
+  EOF
+  1\t0.191666666667
+  2\t0.175
+  3\t0.241666666667
+  4\t0.65
+  5\t0.241666666667
+\u00a0
+"""
+
 def get_args_network(args):
     net = args.network
     weights = read_weights_file(args.weights_file)
@@ -170,6 +230,21 @@ def main_fair_proportion(args):
 
     for node_name in args.nodes:
         print('{}\t{}'.format(node_name, fair_proportion(net, net.node_by_taxa(node_name), kappa_fn=kappa_fn)))
+
+def main_cophenetic_shapley_value(args):
+    net = get_args_network(args)
+    kappa_fn = cache_kappa(net)
+
+    for node_name in args.nodes:
+        print('{}\t{}'.format(node_name, cophenetic_shapley_value(net, net.node_by_taxa(node_name), kappa_fn=kappa_fn)))
+
+def main_unrooted_shapley_value(args):
+    net = get_args_network(args)
+    kappa_fn = cache_kappa(net)
+
+    for node_name in args.nodes:
+        print('{}\t{}'.format(node_name, unrooted_shapley_value(net, net.node_by_taxa(node_name), kappa_fn=kappa_fn)))
+
 
 def main():
     def phylonetwork_argument(s):
@@ -233,8 +308,28 @@ def main():
 
     add_network_arg(fp_parser)
     add_weights_file_arg(fp_parser)
-    fp_parser.add_argument('nodes', help='Target node', type=str, nargs='+')
+    fp_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
     fp_parser.set_defaults(main_fn=main_fair_proportion)
+
+    coph_sv_parser = subparsers.add_parser('cophenetic-shapley-value',
+        help='Compute the cophenetic shapley value of a node',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=COPH_SV_USAGE_EXAMPLE)
+
+    add_network_arg(coph_sv_parser)
+    add_weights_file_arg(coph_sv_parser)
+    coph_sv_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
+    coph_sv_parser.set_defaults(main_fn=main_cophenetic_shapley_value)
+
+    u_sv_parser = subparsers.add_parser('unrooted-shapley-value',
+        help='Compute the unrooted shapley value of a node',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=U_SV_USAGE_EXAMPLE)
+
+    add_network_arg(u_sv_parser)
+    add_weights_file_arg(u_sv_parser)
+    u_sv_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
+    u_sv_parser.set_defaults(main_fn=main_unrooted_shapley_value)
 
     args = parser.parse_args()
     args.main_fn(args)
