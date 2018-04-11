@@ -14,9 +14,9 @@ pip3 install --user phylonetwork
 
 ## Computing the phylogenetic subnet diversity
 
-Given the network `((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;` with the weights given
-below, one can obtain both the rooted and the unrooted phylogenetic subnet
-diversity by executing (for instance, with `X = {3,4}`)
+Given the network `((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;`,
+one can obtain both the rooted and the unrooted phylogenetic subnet diversity
+by executing (for instance, with `X = {3,4}`)
 ```
 $ python3 shapley-networks.py rpsd '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 3 4
 1.5
