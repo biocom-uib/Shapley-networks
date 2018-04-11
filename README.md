@@ -1,93 +1,62 @@
 # Shapley networks
 
+This script can be used to compute some indices of a phylogenetic network, such
+as the fair proportion of a node or its unrooted shapley values.
+
+Note that all networks are introduced in the [Extended Newick](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-532) format.
+
 ## Dependencies
 
-Before using this script, you need to install [PhyloNetwork](https://github.com/bielcardona/PhyloNetworks):
+Before using this script, you need to install [PhyloNetwork](https://github.com/bielcardona/PhyloNetworks) `>= 1.2`:
 ```
-pip2 install --user phylonetwork
+pip3 install --user phylonetwork
 ```
 
 ## Computing the phylogenetic subnet diversity
 
-Given the network `((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r` with the weights given
+Given the network `((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;` with the weights given
 below, one can obtain both the rooted and the unrooted phylogenetic subnet
 diversity by executing (for instance, with `X = {3,4}`)
 ```
-$ python2 shapley-networks.py rpsd '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 3 4 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
+$ python3 shapley-networks.py rpsd '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 3 4
 1.5
 
-$ python2 shapley-networks.py upsd '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 3 4 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
+$ python3 shapley-networks.py upsd '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 3 4
 1.1
 ```
 
 Similarly, the cophenetic value is obtained via the `cophenetic-value` command
 ```
-$ python2 shapley-networks.py cophenetic-value '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 3 4 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
+$ python3 shapley-networks.py cophenetic-value '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 3 4
 0.4
 ```
 
 ## Computing the Shapley values of a node
 
-Given the network `((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r`, the FP of the nodes 1,
-2, 3, 4 and 5 can be computed as follows:
+Given the network `((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;`,
+the FP of nodes 1, 2, 3, 4 and 5 can be computed as follows:
 ```
-$ python2 shapley-networks.py fair-proportion '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 1 2 3 4 5 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
-1       0.0333333333333
-2       0.0666666666667
-3       0.183333333333
+$ python3 shapley-networks.py fair-proportion '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 1 2 3 4 5
+1       0.03333333333333333
+2       0.06666666666666667
+3       0.18333333333333332
 4       0.95
-5       0.266666666667
+5       0.26666666666666666
 ```
 
-The cophenetic Shapley value and the unrooted Shapley value are calculated analogously:
+Cophenetic Shapley values and the unrooted Shapley values are calculated analogously:
 ```
-$ python2 shapley-networks.py cophenetic-shapley-value '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 1 2 3 4 5 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
-1       -0.158333333333
-2       -0.108333333333
-3       -0.0583333333333
+$ python3 shapley-networks.py cophenetic-shapley-value '((1,(3,#h1)c:0.3)a:0.1,(2,((4:0.5)h#h1,5)d:0.4)b:0.2)r;' 1 2 3 4 5
+1       -0.15833333333333338
+2       -0.10833333333333334
+3       -0.05833333333333335
 4       0.3
-5       0.025
+5       0.024999999999999967
 
-$ python2 shapley-networks.py unrooted-shapley-value '((1,(3,#H1)c)a,(2,((4)H#H1,5)d)b)r;' - 1 2 3 4 5 <<EOF
-H,4,0.5
-a,c,0.3
-b,d,0.4
-r,a,0.1
-r,b,0.2
-EOF
-1       0.191666666667
+$ python3 shapley-networks.py unrooted-shapley-value '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 1 2 3 4 5
+1       0.1916666666666667
 2       0.175
-3       0.241666666667
-4       0.65
-5       0.241666666667
+3       0.24166666666666667
+4       0.6500000000000001
+5       0.2416666666666667
 ```

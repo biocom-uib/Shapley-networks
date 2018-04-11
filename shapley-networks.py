@@ -1,6 +1,3 @@
-from __future__ import print_function, division
-
-from csv import reader as csv_reader
 from itertools import chain
 import networkx as nx
 import phylonetwork as ph
@@ -18,7 +15,7 @@ def iter_length(g):
     return c
 
 def default_weight_fn(net, w, v):
-    return net.edge[w][v]['weight']
+    return net.edge[w][v].get('length', 0)
 
 def nodes_below(net, u):
     yield u
@@ -88,9 +85,6 @@ def unrooted_shapley_value(net, u, weight_fn=default_weight_fn, kappa_fn=None):
     sv = fair_proportion(net, u, weight_fn=weight_fn, kappa_fn=kappa_fn)
     coph_sv = cophenetic_shapley_value(net, u, weight_fn=weight_fn, kappa_fn=kappa_fn)
     return sv - coph_sv
-
-def read_weights_file(f):
-    return {(u, v): float(w) for u,v,w in csv_reader(f, skipinitialspace=True)}
 
 COPH_USAGE_EXAMPLE = u"""
 Usage example:
@@ -195,51 +189,37 @@ Usage example:
 \u00a0
 """
 
-def get_args_network(args):
-    net = args.network
-    weights = read_weights_file(args.weights_file)
-
-    for u in net:
-        for v in net[u]:
-            labs = net.label(u), net.label(v)
-            if labs in weights:
-                net.edge[u][v]['weight'] = weights[labs]
-            else:
-                net.edge[u][v]['weight'] = 0
-
-    return net
-
 def main_cophenetic_value(args):
-    net = get_args_network(args)
+    net = args.network
 
     print(cophenetic_value(net, [net.node_by_taxa(node_name) for node_name in args.nodes]))
 
 def main_rooted_phylogenetic_diversity(args):
-    net = get_args_network(args)
+    net = args.network
 
     print(rooted_phylogenetic_diversity(net, [net.node_by_taxa(node_name) for node_name in args.nodes]))
 
 def main_unrooted_phylogenetic_diversity(args):
-    net = get_args_network(args)
+    net = args.network
 
     print(unrooted_phylogenetic_diversity(net, [net.node_by_taxa(node_name) for node_name in args.nodes]))
 
 def main_fair_proportion(args):
-    net = get_args_network(args)
+    net = read_enewick(args.network.eNewick())
     kappa_fn = cache_kappa(net)
 
     for node_name in args.nodes:
         print('{}\t{}'.format(node_name, fair_proportion(net, net.node_by_taxa(node_name), kappa_fn=kappa_fn)))
 
 def main_cophenetic_shapley_value(args):
-    net = get_args_network(args)
+    net = args.network
     kappa_fn = cache_kappa(net)
 
     for node_name in args.nodes:
         print('{}\t{}'.format(node_name, cophenetic_shapley_value(net, net.node_by_taxa(node_name), kappa_fn=kappa_fn)))
 
 def main_unrooted_shapley_value(args):
-    net = get_args_network(args)
+    net = args.network
     kappa_fn = cache_kappa(net)
 
     for node_name in args.nodes:
@@ -259,12 +239,6 @@ def main():
             help='Phylogenetic network in eNewick format (weights not supported)',
             type=phylonetwork_argument)
 
-    def add_weights_file_arg(parser):
-        parser.add_argument(
-            'weights_file',
-            help='Edge weights file. It should be in CSV format with three columns and no header: node1, node2, weight.',
-            type=argparse.FileType('r'))
-
     parser = argparse.ArgumentParser(
         description='Compute phylogenetic network indices')
 
@@ -277,7 +251,6 @@ def main():
         epilog=COPH_USAGE_EXAMPLE)
 
     add_network_arg(coph_parser)
-    add_weights_file_arg(coph_parser)
     coph_parser.add_argument('nodes', help='Bottom nodes in the subnet', type=str, nargs='*')
     coph_parser.set_defaults(main_fn=main_cophenetic_value)
 
@@ -287,17 +260,15 @@ def main():
         epilog=rPSD_USAGE_EXAMPLE)
 
     add_network_arg(rpsd_parser)
-    add_weights_file_arg(rpsd_parser)
     rpsd_parser.add_argument('nodes', help='Bottom nodes in the subnet', type=str, nargs='*')
     rpsd_parser.set_defaults(main_fn=main_rooted_phylogenetic_diversity)
 
     upsd_parser = subparsers.add_parser('upsd',
-        help='Compute the (rooted) phylogenetic subnet diversity',
+        help='Compute the (unrooted) phylogenetic subnet diversity',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=uPSD_USAGE_EXAMPLE)
 
     add_network_arg(upsd_parser)
-    add_weights_file_arg(upsd_parser)
     upsd_parser.add_argument('nodes', help='Bottom nodes in the subnet', type=str, nargs='*')
     upsd_parser.set_defaults(main_fn=main_unrooted_phylogenetic_diversity)
 
@@ -307,7 +278,6 @@ def main():
         epilog=FP_USAGE_EXAMPLE)
 
     add_network_arg(fp_parser)
-    add_weights_file_arg(fp_parser)
     fp_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
     fp_parser.set_defaults(main_fn=main_fair_proportion)
 
@@ -317,7 +287,6 @@ def main():
         epilog=COPH_SV_USAGE_EXAMPLE)
 
     add_network_arg(coph_sv_parser)
-    add_weights_file_arg(coph_sv_parser)
     coph_sv_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
     coph_sv_parser.set_defaults(main_fn=main_cophenetic_shapley_value)
 
@@ -327,7 +296,6 @@ def main():
         epilog=U_SV_USAGE_EXAMPLE)
 
     add_network_arg(u_sv_parser)
-    add_weights_file_arg(u_sv_parser)
     u_sv_parser.add_argument('nodes', help='Target nodes', type=str, nargs='+')
     u_sv_parser.set_defaults(main_fn=main_unrooted_shapley_value)
 
@@ -337,11 +305,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
     #net = read_enewick('((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;')
-    #weights = {('H','4'): 0.5, ('a','c'): 0.3, ('b','d'): 0.4, ('r','a'): 0.1, ('r','b'): 0.2}
-    # H,4,0.5
-    # a,c,0.3
-    # b,d,0.4
-    # r,a,0.1
-    # r,b,0.2
