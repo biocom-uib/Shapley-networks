@@ -46,7 +46,7 @@ $ python3 shapley-networks.py fair-proportion '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5
 
 Cophenetic Shapley values and the unrooted Shapley values are calculated analogously:
 ```
-$ python3 shapley-networks.py cophenetic-shapley-value '((1,(3,#h1)c:0.3)a:0.1,(2,((4:0.5)h#h1,5)d:0.4)b:0.2)r;' 1 2 3 4 5
+$ python3 shapley-networks.py cophenetic-shapley-value '((1,(3,#H1)c:0.3)a:0.1,(2,((4:0.5)H#H1,5)d:0.4)b:0.2)r;' 1 2 3 4 5
 1       -0.15833333333333338
 2       -0.10833333333333334
 3       -0.05833333333333335
